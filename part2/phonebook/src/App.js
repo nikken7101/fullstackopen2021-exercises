@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
 import Filter from './components/Filter'
 import PersonForm from './components/PersonForm'
 import Persons from './components/Persons'
+import personService from './services/persons'
 
 const App = () => {
   const [persons, setPersons] = useState([])
@@ -11,23 +11,47 @@ const App = () => {
   const [newFilter, setNewFilter] = useState('')
 
   useEffect(() => {
-    axios
-      .get('http://localhost:3001/persons')
-      .then(response => setPersons(response.data))
+    personService
+      .getAll()
+      .then(initialPersons => setPersons(initialPersons.sort((p1, p2) => p1.id - p2.id)))
   }, [])
 
   console.log('render', persons.length, 'persons')
 
   const addPerson = (event) => {
     event.preventDefault()
-    if (persons.find(p => p.name === newName)) {
-      alert(`${newName} is already added to phonebook`)
+    if (persons.find(p => p.name === newName && p.number === newNumber)) {
+      alert(`${newName} is already in phonebook.`)
       return
     }
-    setPersons(persons.concat({ name: newName, number: newNumber }))
-    setNewName('')
-    setNewNumber('')
+    const newPerson = { name: newName, number: newNumber }
+    const replacedPerson = persons.find(p => p.name === newName && p.number !== newNumber)
+    if (replacedPerson) {
+      if (window.confirm(`${newName} is already in phonebook. Replace the old number with new one?`)) {
+        personService.update(replacedPerson.id, newPerson)
+          .then(returnedPerson => {
+            setPersons(persons.filter(p => p.id !== replacedPerson.id).concat(returnedPerson).sort((p1, p2) => p1.id - p2.id))
+            setNewName('')
+            setNewNumber('')
+          })
+      }
+      return
+    }
+    personService
+      .create(newPerson)
+      .then(returnedPerson => {
+        setPersons(persons.concat(returnedPerson))
+        setNewName('')
+        setNewNumber('')
+      })
   }
+
+  const deletePerson = (person) => {
+    if (window.confirm(`Do you really want to delete ${person.name} ?`)) {
+      personService.remove(person.id).then(res => setPersons(persons.filter(p => p.id !== person.id)))
+    }
+  }
+
 
   return (
     <div>
@@ -40,7 +64,7 @@ const App = () => {
         number={newNumber} handleNumberChange={event => setNewNumber(event.target.value)}
       />
       <h3>Numbers</h3>
-      <Persons persons={persons} filterTerm={newFilter} />
+      <Persons persons={persons} filterTerm={newFilter} deletePerson={deletePerson} />
     </div>
   )
 }
