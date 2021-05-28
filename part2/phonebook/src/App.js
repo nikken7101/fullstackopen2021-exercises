@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import Filter from './components/Filter'
 import PersonForm from './components/PersonForm'
 import Persons from './components/Persons'
+import Notification from './components/Notification'
 import personService from './services/persons'
 
 const App = () => {
@@ -9,6 +10,7 @@ const App = () => {
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [newFilter, setNewFilter] = useState('')
+  const [message, setMessage] = useState(null)
 
   useEffect(() => {
     personService
@@ -21,7 +23,8 @@ const App = () => {
   const addPerson = (event) => {
     event.preventDefault()
     if (persons.find(p => p.name === newName && p.number === newNumber)) {
-      alert(`${newName} is already in phonebook.`)
+      setMessage({ text: `${newName} is already in phonebook.`, type: "error" })
+      setTimeout(() => setMessage(null), 5000)
       return
     }
     const newPerson = { name: newName, number: newNumber }
@@ -33,6 +36,12 @@ const App = () => {
             setPersons(persons.filter(p => p.id !== replacedPerson.id).concat(returnedPerson).sort((p1, p2) => p1.id - p2.id))
             setNewName('')
             setNewNumber('')
+            setMessage({ text: `Updated ${returnedPerson.name}`, type: "info" })
+            setTimeout(() => setMessage(null), 5000)
+          }).catch(error => {
+            setPersons(persons.filter(p => p.id !== replacedPerson.id))
+            setMessage({ text: `Information of ${newName} has already been removed from server`, type: "error" })
+            setTimeout(() => setMessage(null), 5000)
           })
       }
       return
@@ -43,12 +52,24 @@ const App = () => {
         setPersons(persons.concat(returnedPerson))
         setNewName('')
         setNewNumber('')
+        setMessage({ text: `Added ${returnedPerson.name}`, type: "info" })
+        setTimeout(() => setMessage(null), 5000)
       })
   }
 
   const deletePerson = (person) => {
     if (window.confirm(`Do you really want to delete ${person.name} ?`)) {
-      personService.remove(person.id).then(res => setPersons(persons.filter(p => p.id !== person.id)))
+      personService.remove(person.id)
+        .then(res => {
+          setPersons(persons.filter(p => p.id !== person.id))
+          setMessage({ text: `Deleted ${person.name}`, type: "info" })
+          setTimeout(() => setMessage(null), 5000)
+        })
+        .catch(error => {
+          setPersons(persons.filter(p => p.id !== person.id))
+          setMessage({ text: `Information of ${newName} has already been removed from server`, type: "error" })
+          setTimeout(() => setMessage(null), 5000)
+        })
     }
   }
 
@@ -56,6 +77,7 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
+      <Notification message={message} />
       <Filter value={newFilter} handler={event => setNewFilter(event.target.value.toLowerCase())} />
       <h3>Add a new</h3>
       <PersonForm
