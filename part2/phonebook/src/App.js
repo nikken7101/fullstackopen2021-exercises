@@ -55,6 +55,11 @@ const App = () => {
         setMessage({ text: `Added ${returnedPerson.name}`, type: "info" })
         setTimeout(() => setMessage(null), 5000)
       })
+      .catch(error => {
+        console.log(error.response)
+        setMessage({ text: error.response.data.error, type: "error" })
+        setTimeout(() => setMessage(null), 5000)
+      })
   }
 
   const deletePerson = (person) => {
